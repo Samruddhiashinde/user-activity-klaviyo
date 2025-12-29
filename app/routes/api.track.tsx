@@ -1,24 +1,37 @@
-import { json } from "@remix-run/node";
-import type { ActionFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs } from "react-router";
 import { prisma } from "../db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   try {
     const payload = await request.json();
     const { event, data, timestamp, shopDomain } = payload;
 
-    // Get shop configuration from database
-    const shop = await prisma.shop.findUnique({
+    // Try to find shop by exact domain or by cleaning the domain
+    let shop = await prisma.shop.findUnique({
       where: { shopDomain },
     });
 
+    // If not found, try without .myshopify.com
+    if (!shop && shopDomain?.includes('.myshopify.com')) {
+      const cleanDomain = shopDomain.replace('.myshopify.com', '');
+      shop = await prisma.shop.findUnique({
+        where: { shopDomain: cleanDomain },
+      });
+    }
+
     if (!shop) {
       console.log(`Shop not found: ${shopDomain}`);
-      return json({ error: "Shop not found" }, { status: 404 });
+      return new Response(JSON.stringify({ error: "Shop not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Check if event tracking is enabled for this event type
@@ -26,13 +39,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const eventKey = event.replace(/\s+/g, '');
 
     if (eventSettings && !eventSettings[eventKey]?.enabled) {
-      return json({ message: "Event tracking disabled" }, { status: 200 });
+      return new Response(JSON.stringify({ message: "Event tracking disabled" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Check consent flags (GDPR compliance)
     const consentFlags = shop.consentFlags as any;
     if (consentFlags && !consentFlags.marketing) {
-      return json({ message: "No marketing consent" }, { status: 200 });
+      return new Response(JSON.stringify({ message: "No marketing consent" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Enrich event data with shop context
@@ -73,14 +92,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     });
 
-    return json({ success: true, message: "Event tracked successfully" });
+    return new Response(JSON.stringify({ success: true, message: "Event tracked successfully" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
 
   } catch (error: any) {
     console.error("Error processing event:", error);
 
-    return json(
-      { error: "Failed to process event", details: error.message },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: "Failed to process event", details: error.message }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
     );
   }
 };

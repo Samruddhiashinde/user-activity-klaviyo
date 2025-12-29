@@ -14,21 +14,58 @@ datasource db {
 }
 
 model Session {
-  id            String    @id
-  shop          String
-  state         String
-  isOnline      Boolean   @default(false)
-  scope         String?
-  expires       DateTime?
-  accessToken   String
-  userId        BigInt?
-  firstName     String?
-  lastName      String?
-  email         String?
-  accountOwner  Boolean   @default(false)
-  locale        String?
-  collaborator  Boolean?  @default(false)
-  emailVerified Boolean?  @default(false)
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
   refreshToken        String?
   refreshTokenExpires DateTime?
+}
+
+model Shop {
+  id                String        @id @default(uuid())
+  shopDomain        String        @unique
+  accessToken       String        @db.Text
+  klaviyoApiKey     String?       @db.Text
+  klaviyoPrivateKey String?       @db.Text
+  gtmContainerId    String?
+  eventSettings     Json?
+  consentFlags      Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  failedEvents      FailedEvent[]
+  debugLogs         DebugLog[]
+}
+
+model FailedEvent {
+  id          String   @id @default(uuid())
+  shopId      String
+  eventType   String
+  payload     Json
+  error       String   @db.Text
+  retryCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  shop        Shop     @relation(fields: [shopId], references: [id])
+}
+
+model DebugLog {
+  id        String   @id @default(uuid())
+  shopId    String
+  level     String
+  message   String   @db.Text
+  metadata  Json?
+  createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id])
 }
