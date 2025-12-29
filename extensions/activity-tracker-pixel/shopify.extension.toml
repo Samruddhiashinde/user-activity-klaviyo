@@ -1,0 +1,16 @@
+name = "activity-tracker-pixel"
+type = "web_pixel_extension"
+uid = "b09c9f0c-5758-6443-001e-cb3cd2549ac080db41d9"
+
+runtime_context = "strict"
+
+[settings]
+type = "object"
+
+[settings.fields.accountID]
+name = "Account ID"
+description = "Account ID"
+type = "single_line_text_field"
+validations =  [
+  { name = "min", value = "1" }
+]
